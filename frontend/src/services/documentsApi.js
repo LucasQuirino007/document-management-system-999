@@ -1,5 +1,9 @@
 const API_PREFIX = '/api';
-const USER_ID_HEADER = { 'X-User-Id': 'demo-user' };
+
+function getUserIdHeader() {
+  const userId = localStorage.getItem('dms-user-id') || 'demo-user';
+  return { 'X-User-Id': userId };
+}
 
 async function parseJsonResponse(response) {
   const contentType = response.headers.get('content-type') || '';
@@ -27,7 +31,7 @@ export async function uploadDocument(file) {
 
   const response = await fetch(`${API_PREFIX}/upload`, {
     method: 'POST',
-    headers: USER_ID_HEADER,
+    headers: getUserIdHeader(),
     body: formData,
   });
 
@@ -36,7 +40,7 @@ export async function uploadDocument(file) {
 
 export async function listDocuments() {
   const response = await fetch(`${API_PREFIX}/documents`, {
-    headers: USER_ID_HEADER,
+    headers: getUserIdHeader(),
   });
 
   const data = await parseJsonResponse(response);
@@ -45,7 +49,7 @@ export async function listDocuments() {
 
 export async function downloadDocument(documentId) {
   const response = await fetch(`${API_PREFIX}/documents/${documentId}/download`, {
-    headers: USER_ID_HEADER,
+    headers: getUserIdHeader(),
   });
 
   if (!response.ok) {

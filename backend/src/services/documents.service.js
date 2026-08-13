@@ -45,8 +45,9 @@ async function getDownload(owner, id) {
   }
 
   try {
-    await require('node:fs/promises').access(document.filePath);
-    return document;
+    const safeFilePath = documentsRepository.ensureSafeStoragePath(document.filePath);
+    await require('node:fs/promises').access(safeFilePath);
+    return { ...document, filePath: safeFilePath };
   } catch (error) {
     throw new DocumentError('DOCUMENT_NOT_FOUND', 'Documento nao encontrado.', 404);
   }

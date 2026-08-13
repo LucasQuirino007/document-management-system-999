@@ -15,6 +15,22 @@ const allowedMimeTypes = new Set(
 );
 const documents = new Map();
 
+function ensureSafeStoragePath(filePath) {
+  if (typeof filePath !== 'string' || !filePath.trim()) {
+    throw new Error('INVALID_STORAGE_PATH');
+  }
+
+  const resolvedPath = path.resolve(filePath);
+  const storageRoot = path.resolve(storageDirectory);
+  const isInsideStorage = resolvedPath === storageRoot || resolvedPath.startsWith(`${storageRoot}${path.sep}`);
+
+  if (!isInsideStorage) {
+    throw new Error('INVALID_STORAGE_PATH');
+  }
+
+  return resolvedPath;
+}
+
 const diskStorage = multer.diskStorage({
   destination: async (request, file, callback) => {
     try {
@@ -43,6 +59,11 @@ const upload = multer({
 });
 
 async function add(file, owner) {
+  if (!file || typeof file.path !== 'string') {
+    throw new Error('INVALID_STORAGE_PATH');
+  }
+
+  const safeFilePath = ensureSafeStoragePath(file.path);
   const id = `doc_${crypto.randomUUID()}`;
   const metadata = {
     id,
@@ -53,7 +74,7 @@ async function add(file, owner) {
     mimeType: file.mimetype,
   };
 
-  documents.set(id, { ...metadata, filePath: file.path });
+  documents.set(id, { ...metadata, filePath: safeFilePath });
   return metadata;
 }
 
@@ -74,8 +95,18 @@ function findOwned(id, owner) {
 }
 
 async function remove(document) {
+  if (!document || !document.id) {
+    return;
+  }
+
   documents.delete(document.id);
-  await fs.unlink(document.filePath).catch(() => {});
+
+  try {
+    const safeFilePath = ensureSafeStoragePath(document.filePath);
+    await fs.unlink(safeFilePath).catch(() => {});
+  } catch (error) {
+    // Ignora removals fora do armazenamento para evitar acesso indevido ao filesystem.
+  }
 }
 
 function toPublicMetadata(document) {
@@ -85,6 +116,7 @@ function toPublicMetadata(document) {
 
 module.exports = {
   add,
+  ensureSafeStoragePath,
   findOwned,
   listByOwner,
   remove,

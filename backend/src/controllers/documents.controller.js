@@ -33,7 +33,14 @@ async function download(request, response, next) {
 }
 
 function sanitizeFilename(filename) {
-  return String(filename || 'documento').replace(/[\r\n"\\/]/g, '_');
+  const safeName = String(filename || 'documento')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[<>:"|?*\\/]+/g, '_')
+    .replace(/[\r\n]+/g, '_')
+    .trim();
+
+  return safeName || 'documento';
 }
 
 module.exports = { upload, list, download };
